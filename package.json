@@ -1,0 +1,23 @@
+{
+  "name": "teraslice_hdfs_append",
+  "version": "1.0.0",
+  "description": "teralice processor to send to hdfs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/terascope/teraslice_hdfs_append.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/terascope/teraslice_hdfs_append/issues"
+  },
+  "homepage": "https://github.com/terascope/teraslice_hdfs_append#readme",
+  "dependencies": {
+    "bluebird": "^3.4.1",
+    "lodash": "^4.14.0"
+  }
+}
