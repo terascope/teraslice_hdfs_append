@@ -18,7 +18,6 @@ function newProcessor(context, opConfig, jobConfig) {
 
     // TODO: this should probably be handled at the framework level
     var client = getClient(context, opConfig, 'hdfs');
-
     var hdfs = Promise.promisifyAll(client);
 
     function prepare_file(filename, chunks) {
@@ -29,16 +28,30 @@ function newProcessor(context, opConfig, jobConfig) {
                 return hdfs.mkdirsAsync(path.dirname(filename))
                     .then(function(status) {
                         return hdfs.createAsync(filename, '');
-                    });
+                    })
+                    .catch(function(err) {
+                        console.log('whats in catvch here', err.message);
+                    })
             })
-            .return(chunks)
+            .finally(chunks)
             // We need to serialize the storage of chunks so we run with concurrency 1
-            .map(function(chunk, i) {
-                if (chunk.length > 0) return hdfs.appendAsync(filename, chunk);
+            .map(function(chunk) {
+                if (chunk.length > 0) {
+                    return hdfs.appendAsync(filename, chunk)
+                        .then(function(dat){
+                            console.log('what is this', dat);
+                        })
+                }
+                else {
+                    console.log('im in the else')
+                }
             }, {concurrency: 1})
+            .catch(function(err){
+                //console.log('outside error')
+            })
     }
 
-    return function(data) {
+    return function(data, logger) {
         var map = {};
         data.forEach(function(record) {
             if (!map.hasOwnProperty(record.filename)) map[record.filename] = [];
