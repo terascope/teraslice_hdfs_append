@@ -17,28 +17,26 @@ var path = require('path');
 
 function newProcessor(context, opConfig, jobConfig) {
     var logger = jobConfig.logger;
-    var canMakeNewClient = opConfig.namenode_list.length >= 2
     var endpoint = opConfig.connection ? opConfig.connection : 'default';
-    var nodeNameHost = context.sysconfig.terafoundation.connectors.hdfs[endpoint].namenode_host;
 
     //client connection cannot be cached, an endpoint needs to be re-instantiated for a different namenode_host
     opConfig.connection_cache = false;
 
-    var client = getClient(context, opConfig, 'hdfs');
-    var hdfs = Promise.promisifyAll(client);
+    var clientService = getClient(context, opConfig, 'hdfs_ha');
+    var client = clientService.client
 
-    function prepare_file(hdfs, filename, chunks, logger) {
+    function prepare_file(client, filename, chunks, logger) {
         // We need to make sure the file exists before we try to append to it.
-        return hdfs.getFileStatusAsync(filename)
+        return client.getFileStatusAsync(filename)
             .catch(function(err) {
                 // We'll get an error if the file doesn't exist so create it.
-                return hdfs.mkdirsAsync(path.dirname(filename))
+                return client.mkdirsAsync(path.dirname(filename))
                     .then(function(status) {
                         logger.warn("I should be creating a file")
-                        return hdfs.createAsync(filename, '');
+                        return client.createAsync(filename, '');
                     })
                     .catch(function(err) {
-                        if (canMakeNewClient && err.exception === "StandbyException") {
+                        if (err.exception === "StandbyException") {
                             return Promise.reject({initialize: true})
                         }
                         else {
@@ -51,7 +49,7 @@ function newProcessor(context, opConfig, jobConfig) {
             // We need to serialize the storage of chunks so we run with concurrency 1
             .map(function(chunk) {
                 if (chunk.length > 0) {
-                    return hdfs.appendAsync(filename, chunk)
+                    return client.appendAsync(filename, chunk)
                 }
             }, {concurrency: 1})
             .catch(function(err) {
@@ -72,10 +70,10 @@ function newProcessor(context, opConfig, jobConfig) {
             map[record.filename].push(record.data)
         });
 
-        function sendFiles(){
+        function sendFiles() {
             var stores = [];
             _.forOwn(map, function(chunks, key) {
-                stores.push(prepare_file(hdfs, key, chunks, logger));
+                stores.push(prepare_file(client, key, chunks, logger));
             });
 
             // We can process all individual files in parallel.
@@ -83,9 +81,8 @@ function newProcessor(context, opConfig, jobConfig) {
                 .catch(function(err) {
                     if (err.initialize) {
                         logger.warn(`hdfs namenode has changed, reinitializing client`);
-                        var newClient = makeNewClient(context, opConfig, nodeNameHost, endpoint);
-                        hdfs = newClient.hdfs;
-                        nodeNameHost = newClient.nodeNameHost;
+                        var newClient = clientService.changeNameNode().client;
+                        client = newClient;
                         return sendFiles()
                     }
 
@@ -96,21 +93,6 @@ function newProcessor(context, opConfig, jobConfig) {
         }
 
         return sendFiles();
-    }
-}
-
-function makeNewClient(context, opConfig, conn, endpoint) {
-    var list = opConfig.namenode_list;
-    //we want the next spot
-    var index = list.indexOf(conn) + 1;
-    //if empty start from the beginning of the
-    var nodeNameHost= list[index] ? list[index] : list[0];
-
-    //TODO need to review this, altering config so getClient will start with new namenode_host
-    context.sysconfig.terafoundation.connectors.hdfs[endpoint].namenode_host = nodeNameHost
-    return {
-        nodeNameHost: nodeNameHost,
-        hdfs: Promise.promisifyAll(getClient(context, opConfig, 'hdfs'))
     }
 }
 
@@ -128,7 +110,7 @@ function getClient(context, config, type) {
         clientConfig.cached = true;
     }
 
-    return context.foundation.getConnection(clientConfig).client;
+    return context.foundation.getConnection(clientConfig);
 }
 
 function schema() {
@@ -137,10 +119,6 @@ function schema() {
             doc: 'User to use when writing the files. Default: "hdfs"',
             default: 'hdfs',
             format: 'optional_String'
-        },
-        namenode_list: {
-            doc: 'A list containing all namenode_hosts, this option is needed for high availability',
-            default: []
         }
     };
 }
@@ -149,3 +127,4 @@ module.exports = {
     newProcessor: newProcessor,
     schema: schema
 };
+
