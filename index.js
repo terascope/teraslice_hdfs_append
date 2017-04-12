@@ -18,7 +18,6 @@ var path = require('path');
 function newProcessor(context, opConfig, jobConfig) {
     var logger = jobConfig.logger;
     var endpoint = opConfig.connection ? opConfig.connection : 'default';
-    var nameNodeHost = context.sysconfig.terafoundation.connectors.hdfs[endpoint].namenode_host;
 
     //client connection cannot be cached, an endpoint needs to be re-instantiated for a different namenode_host
     opConfig.connection_cache = false;
@@ -82,7 +81,6 @@ function newProcessor(context, opConfig, jobConfig) {
                 .catch(function(err) {
                     if (err.initialize) {
                         logger.warn(`hdfs namenode has changed, reinitializing client`);
-                        //TODO fix
                         var newClient = clientService.changeNameNode().client;
                         client = newClient;
                         return sendFiles()
@@ -121,10 +119,6 @@ function schema() {
             doc: 'User to use when writing the files. Default: "hdfs"',
             default: 'hdfs',
             format: 'optional_String'
-        },
-        namenode_list: {
-            doc: 'A list containing all namenode_hosts, this option is needed for high availability',
-            default: []
         }
     };
 }
