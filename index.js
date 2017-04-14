@@ -114,7 +114,13 @@ function getClient(context, config, type) {
 
 function schema() {
     //most important schema configs are in the connection configuration
-    return {};
+    return {
+        connection: {
+            doc: 'Name of the HDFS connection to use.',
+            default: 'default',
+            format: 'optional_String'
+        }
+    };
 }
 
 module.exports = {
