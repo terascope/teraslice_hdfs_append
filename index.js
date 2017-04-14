@@ -32,7 +32,6 @@ function newProcessor(context, opConfig, jobConfig) {
                 // We'll get an error if the file doesn't exist so create it.
                 return client.mkdirsAsync(path.dirname(filename))
                     .then(function(status) {
-                        logger.warn("I should be creating a file")
                         return client.createAsync(filename, '');
                     })
                     .catch(function(err) {
@@ -114,13 +113,8 @@ function getClient(context, config, type) {
 }
 
 function schema() {
-    return {
-        user: {
-            doc: 'User to use when writing the files. Default: "hdfs"',
-            default: 'hdfs',
-            format: 'optional_String'
-        }
-    };
+    //most important schema configs are in the connection configuration
+    return {};
 }
 
 module.exports = {
