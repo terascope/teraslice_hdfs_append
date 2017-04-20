@@ -35,13 +35,8 @@ function newProcessor(context, opConfig, jobConfig) {
                         return client.createAsync(filename, '');
                     })
                     .catch(function(err) {
-                        if (err.exception === "StandbyException") {
-                            return Promise.reject({initialize: true})
-                        }
-                        else {
-                            var errMsg = err.stack;
-                            return Promise.reject(`Error while attempting to create the file: ${filename} on hdfs, error: ${errMsg}`);
-                        }
+                        var errMsg = err.stack;
+                        return Promise.reject(`Error while attempting to create the file: ${filename} on hdfs, error: ${errMsg}`);
                     })
             })
             .return(chunks)
@@ -53,9 +48,6 @@ function newProcessor(context, opConfig, jobConfig) {
             }, {concurrency: 1})
             .catch(function(err) {
                 //for now we will throw if there is an async error
-                if (err.initialize) {
-                    return Promise.reject(err)
-                }
                 var errMsg = err.stack ? err.stack : err
                 return Promise.reject(`Error sending data to file: ${filename}, error: ${errMsg}, data: ${JSON.stringify(chunks)}`)
             })
@@ -78,13 +70,6 @@ function newProcessor(context, opConfig, jobConfig) {
             // We can process all individual files in parallel.
             return Promise.all(stores)
                 .catch(function(err) {
-                    if (err.initialize) {
-                        logger.warn(`hdfs namenode has changed, reinitializing client`);
-                        var newClient = clientService.changeNameNode().client;
-                        client = newClient;
-                        return sendFiles()
-                    }
-
                     var errMsg = err.stack ? err.stack : err
                     logger.error(`Error while sending to hdfs, error: ${errMsg}`)
                     return Promise.reject(err)
