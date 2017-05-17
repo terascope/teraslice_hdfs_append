@@ -1,3 +1,11 @@
+# Processor - teraslice_hdfs_append
+
+To install from the root of your teraslice instance.
+
+```
+npm install terascope/teraslice_hdfs_append
+```
+
 # Description
 
 Appends chunks of data to files in HDFS. To avoid concurrency issues the files will be given unique names associated with each worker.
