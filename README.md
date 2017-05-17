@@ -1,6 +1,6 @@
 # Description
 
-Description of the operation
+Appends chunks of data to files in HDFS. To avoid concurrency issues the files will be given unique names associated with each worker.
 
 # Expected Inputs
 
