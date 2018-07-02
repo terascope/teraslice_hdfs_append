@@ -48,8 +48,7 @@ function newProcessor(context, opConfig, jobConfig) {
             }, {concurrency: 1})
             .catch(function(err) {
                 //for now we will throw if there is an async error
-                var errMsg = err.stack ? err.stack : err
-                return Promise.reject(`Error sending data to file: ${filename}, error: ${errMsg}, data: ${JSON.stringify(chunks)}`)
+                return Promise.reject(`Error sending data to file: ${filename}, error: ${err.message}, stack: ${err.stack}, data: ${JSON.stringify(chunks)}`)
             })
     }
 
